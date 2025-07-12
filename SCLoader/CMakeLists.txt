@@ -7,4 +7,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(${PROJECT_SOURCE_DIR})
 
-add_executable(SCLoader main.cpp)
+add_executable(${PROJECT_NAME} main.cpp)

