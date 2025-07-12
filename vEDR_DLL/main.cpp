@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <iostream>
+#include <ntstatus.h>
 
 #include "MinHook.h"
 
@@ -27,7 +28,11 @@ DWORD NTAPI HookedNtAllocateVirtualMemory(
         switch (Protect) {
             case PAGE_EXECUTE_READWRITE: {
                 std::cout << "Hooked NtAllocateVirtualMemory::PAGE_EXECUTE_READWRITE [Rejected]" << std::endl;
-                return 0;
+                return STATUS_ACCESS_DENIED;
+            }
+            case PAGE_READWRITE: {
+                std::cout << "Hooked NtAllocateVirtualMemory::PAGE_READWRITE [Rejected]" << std::endl;
+                return STATUS_ACCESS_DENIED;
             }
             default: {
                 std::cout << "Hooked NtAllocateVirtualMemory::" << Protect << " [Allowed]" << std::endl;
@@ -73,7 +78,8 @@ void vEDRHookExit() {
 BOOL APIENTRY DllMain(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
     switch (ul_reason_for_call) {
         case DLL_PROCESS_ATTACH: {
-            std::cout << "Dll attached!" << std::endl;
+            FreeConsole();
+            AllocConsole();
             vEDRHookInit();
         }
         case DLL_THREAD_ATTACH:
@@ -81,7 +87,7 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserve
         default:
             break;
         case DLL_PROCESS_DETACH: {
-            std::cout << "Dll dettached!" << std::endl;
+            FreeConsole();
             vEDRHookExit();
         }
     }
