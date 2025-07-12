@@ -40,6 +40,8 @@ int main() {
     void *exec = VirtualAlloc(nullptr, sizeof(buf), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
     memcpy(exec, buf, sizeof(buf));
 
+    system("pause");
+
     const HANDLE hThread = CreateThread(nullptr, 0,
                                         (LPTHREAD_START_ROUTINE) exec,
                                         nullptr, 0, nullptr);

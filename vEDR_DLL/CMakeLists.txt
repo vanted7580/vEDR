@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(${PROJECT_NAME} SHARED main.cpp)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+target_include_directories(${PROJECT_NAME} PRIVATE hooks)
 
 add_subdirectory(lib/minhook)
 
