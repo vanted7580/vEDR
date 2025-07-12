@@ -42,3 +42,10 @@ Ankh.NoLoad
 
 #Visual Studio Code files
 .vscode/
+build/
+bin/
+obj/
+*.lib
+*.dll
+*.exe
+*.pdb
