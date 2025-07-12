@@ -9,6 +9,8 @@ void vEDRHookInit() {
         std::cerr << "Failed to initialize MinHook" << std::endl;
         return;
     }
+
+
     std::cerr << "Successfully initialized MinHook" << std::endl;
 }
 
