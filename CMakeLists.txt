@@ -10,3 +10,4 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_subdirectory(SCLoader)
 add_subdirectory(vEDR_DLL)
+add_subdirectory(vEDR_UA)
