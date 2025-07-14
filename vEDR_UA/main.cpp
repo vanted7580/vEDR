@@ -15,8 +15,9 @@ void HandleClientConnection(HANDLE hPipe) {
         }
 
         buffer[bytesRead] = '\0';
-        std::cout << "Received from DLL: " << buffer << std::endl;
+        std::cout << buffer;
     }
+    printf("Client Disconnected\n");
 }
 
 void StartNamedPipeServer() {

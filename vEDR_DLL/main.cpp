@@ -1,9 +1,11 @@
+
 #include <windows.h>
-#include <iostream>
-#include <string>
 #include <thread>
+#include <sstream>
+#include <iomanip>
 
 #include "MinHook.h"
+#include "logger.h"
 
 bool hooked = false;
 
@@ -18,7 +20,7 @@ typedef DWORD (NTAPI*pNtAllocateVirtualMemory)(
 
 pNtAllocateVirtualMemory pOriginalNtAllocateVirtualMemory = nullptr;
 
-HANDLE hPipe = INVALID_HANDLE_VALUE;
+thread_local bool inLogging = false;
 
 DWORD NTAPI HookedNtAllocateVirtualMemory(
     HANDLE ProcessHandle,
@@ -26,60 +28,65 @@ DWORD NTAPI HookedNtAllocateVirtualMemory(
     ULONG_PTR ZeroBits,
     PSIZE_T RegionSize,
     ULONG AllocationType,
-    ULONG Protect) {
-    if (hooked) {
-        DWORD pid = GetProcessId(ProcessHandle);
+    ULONG Protect)
+{
+    if (hooked && !inLogging) {
 
-        DWORD dwWritten;
+        inLogging = true;
 
-        switch (Protect) {
-            case PAGE_EXECUTE_READWRITE: {
-                //std::cerr << "NtAllocateVirtualMemory::PAGE_EXECUTE_READWRITE (pid " << std::to_string(pid) << ")" <<  std::endl;
-                //return STATUS_ACCESS_DENIED;
-                std::string message = "NtAllocateVirtualMemory::PAGE_EXECUTE_READWRITE";
-                WriteFile(hPipe, message.c_str(), message.length(), &dwWritten, nullptr);
-                break;
-            }
-            case PAGE_READWRITE: {
-                //std::cerr << "NtAllocateVirtualMemory::PAGE_READWRITE (pid " << std::to_string(pid) << ")" <<  std::endl;
-                //return STATUS_ACCESS_DENIED;
-                break;
-            }
-            default: {
-                //std::cerr << "NtAllocateVirtualMemory::" << Protect << " (pid " << std::to_string(pid) << ")" <<  std::endl;
-                break;
-            }
+        DWORD pid    = GetProcessId(ProcessHandle);
+        DWORD tid    = GetCurrentThreadId();
+        void* retAdr = _ReturnAddress();
+
+        NTSTATUS status = pOriginalNtAllocateVirtualMemory(
+            ProcessHandle, BaseAddress, ZeroBits,
+            RegionSize, AllocationType, Protect);
+
+
+        std::ostringstream log;
+
+        SYSTEMTIME st; GetLocalTime(&st);
+        log << "[" << std::setfill('0')
+            << std::setw(2) << st.wHour << ":"
+            << std::setw(2) << st.wMinute << ":"
+            << std::setw(2) << st.wSecond << "] ";
+        log << "PID=" << pid
+            << " TID=" << tid
+            << " Caller=" << retAdr
+            << " BaseAddr=" << *BaseAddress
+            << " Size=" << *RegionSize
+            << " ZeroBits=" << ZeroBits
+            << " Type=" << logger::helper::AllocTypeToString(AllocationType)
+            << " Protect=" << logger::helper::ProtectToString(Protect)
+            << " => Status=0x" << std::hex << status;
+
+        if (Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)) {
+            log << " [EXECUTABLE]";
         }
+
+        log << "\n";
+        logger::log(log.str());
+
+        inLogging = false;
+
+        return status;
     }
 
-    return pOriginalNtAllocateVirtualMemory(ProcessHandle, BaseAddress, ZeroBits, RegionSize, AllocationType, Protect);
+    return pOriginalNtAllocateVirtualMemory(
+        ProcessHandle, BaseAddress, ZeroBits,
+        RegionSize, AllocationType, Protect);
 }
 
 void vEDRHookInit() {
 
-    if (hPipe == INVALID_HANDLE_VALUE) {
-        hPipe = CreateFile(TEXT("\\\\.\\pipe\\vEDR_Pipe"),
-            GENERIC_WRITE,
-            0, nullptr, OPEN_EXISTING, 0, nullptr);
-        if (hPipe == INVALID_HANDLE_VALUE) {
-            return;
-        }
-    }
-
-    std::string message = "Test message";
-
-    DWORD dwWritten;
-
-    WriteFile(hPipe, message.c_str(), message.length(), &dwWritten, nullptr);
-
     if (MH_Initialize() != MH_OK) {
-        // std::cout << "Failed to initialize MinHook" << std::endl;
         return;
     }
 
+    logger::loggerInit();
+
     if (MH_CreateHookApi(L"ntdll", "NtAllocateVirtualMemory", (LPVOID *) &HookedNtAllocateVirtualMemory,
                          (LPVOID *) &pOriginalNtAllocateVirtualMemory) != MH_OK) {
-        // std::cout << "Failed to hook NtAllocateVirtualMemory" << std::endl;
         return;
     }
 
@@ -88,29 +95,23 @@ void vEDRHookInit() {
     }
 
     hooked = true;
-
-    // std::cout << "Successfully initialized MinHook" << std::endl;
 }
 
 void vEDRHookExit() {
+
     MH_DisableHook(MH_ALL_HOOKS);
 
-    if (hPipe != INVALID_HANDLE_VALUE) {
-        CloseHandle(hPipe);
-    }
+    logger::loggerExit();
 
     if (MH_Uninitialize() != MH_OK) {
-        // std::cout << "Failed to uninitialize MinHook" << std::endl;
         return;
     }
-
-    // std::cout << "Successfully uninitialized MinHook" << std::endl;
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
     switch (ul_reason_for_call) {
         case DLL_PROCESS_ATTACH: {
-            DisableThreadLibraryCalls(hModule); // 防止多余通知
+            DisableThreadLibraryCalls(hModule);
             vEDRHookInit();
         }
         case DLL_THREAD_ATTACH:

